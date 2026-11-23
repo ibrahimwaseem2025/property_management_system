@@ -1,0 +1,115 @@
+<?php
+
+namespace App\Domains\Auth\Actions;
+
+use App\Domains\Notifications\Notifications\WelcomeNotification;
+use App\Domains\Settings\Models\AppSetting;
+use App\Domains\Users\Models\User;
+use App\Domains\Workspaces\Models\Workspace;
+use App\Domains\Workspaces\Support\InvitationEmailVerification;
+use App\Domains\Workspaces\Support\WorkspaceMembership;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
+use Laravel\Fortify\Contracts\CreatesNewUsers;
+use Spatie\Permission\Exceptions\RoleDoesNotExist;
+
+class CreateNewUser implements CreatesNewUsers
+{
+    use PasswordValidationRules;
+
+    /**
+     * @param  array<string, string>  $input
+     *
+     * @throws ValidationException
+     */
+    public function create(array $input): User
+    {
+        Validator::make($input, [
+            'first_name' => ['required', 'string', 'max:255'],
+            'last_name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', Rule::unique(User::class)],
+            'password' => $this->passwordRules(),
+        ])->validate();
+
+        $user = User::create([
+            'first_name' => $input['first_name'],
+            'last_name' => $input['last_name'],
+            'email' => $input['email'],
+            'password' => $input['password'],
+        ]);
+
+        $settings = AppSetting::current();
+
+        if ($settings->send_welcome_notification) {
+            $user->notify(new WelcomeNotification);
+        }
+
+        // If they reached registration via a workspace invitation matching this
+        // email, the tokenised invite link already proved inbox control — mark
+        // the email verified so they aren't asked to re-prove it. Strictly gated
+        // (see InvitationEmailVerification). Done before Fortify fires the
+        // Registered event so its verification-email listener (which guards on
+        // ! hasVerifiedEmail()) won't send a now-pointless verification mail.
+        // Guarded for non-HTTP callers (this is a Fortify singleton) where there
+        // is no request session to read the invitation token from.
+        $request = request();
+        if ($request->hasSession()) {
+            InvitationEmailVerification::attempt($user, $request->session());
+        }
+
+        // How the new user gets a workspace. In single-tenant mode (tenancy
+        // off) everyone shares the one default workspace, so create_own is
+        // ignored. In multi-tenant mode the configured registration_mode
+        // decides: create_own leaves the user with NO workspace and defers to
+        // the self-serve onboarding form — WorkspaceLandingController routes a
+        // zero-workspace create_own user to `workspaces.onboarding.show`, where
+        // they name and create their own space. join_default auto-joins the
+        // shared default workspace below.
+        if (! (config('workspaces.enabled') && config('workspaces.registration_mode') === 'create_own')) {
+            $this->attachToDefaultWorkspace($user, $settings->default_role ?? 'User');
+        }
+
+        return $user;
+    }
+
+    /**
+     * New sign-ups auto-join the default workspace configured in
+     * `tenancy.default_workspace_slug` (env: `WORKSPACES_DEFAULT_WORKSPACE`) with the
+     * platform-configured default role. Roles are always workspace-scoped, so we
+     * go through `WorkspaceMembership` to keep the pivot + role assignment in
+     * sync. When the configured slug doesn't resolve we log a warning — the
+     * user would land on the picker with nowhere to go until an admin attaches
+     * them, which is worth surfacing.
+     */
+    private function attachToDefaultWorkspace(User $user, string $defaultRole): void
+    {
+        $slug = config('workspaces.default_workspace_slug', 'default');
+
+        $workspace = Workspace::query()->where('slug', $slug)->first();
+
+        if ($workspace === null) {
+            Log::warning('Default workspace not found for new user; skipping auto-join.', [
+                'slug' => $slug,
+                'user_id' => $user->id,
+            ]);
+
+            return;
+        }
+
+        // Fall back to 'User' if the configured default role isn't one we
+        // recognise as assignable — mirroring the previous swallowed
+        // RoleDoesNotExist behaviour so a bad app-setting value can't block
+        // registration.
+        $role = in_array($defaultRole, WorkspaceMembership::assignableRoles(), true)
+            ? $defaultRole
+            : 'User';
+
+        try {
+            WorkspaceMembership::attach($user, $workspace, [$role]);
+        } catch (RoleDoesNotExist) {
+            $user->workspaces()->syncWithoutDetaching([$workspace->id]);
+        }
+    }
+}

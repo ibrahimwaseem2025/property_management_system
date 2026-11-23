@@ -1,0 +1,33 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    paths:
+        - app
+        - config
+        - database
+        - routes
+
+    level: 5
+
+    ignoreErrors:
+        - '#Property App\\Domains\\Users\\Models\\User::\$[a-z_]+ is never read, only written#'
+        - '#Call to an undefined method Illuminate\\Database\\Eloquent\\Builder#'
+        - '#Call to an undefined method Spatie\\Image\\Drivers\\ImageDriver::#'
+        - '#Call to an undefined method Lab404\\Impersonate\\Services\\ImpersonateManager::#'
+        - '#Called .env. outside of the config directory#'
+        - '#Class Spatie\\MediaLibraryPro\\Models\\TemporaryUpload not found#'
+        - '#should return App\\Domains\\Users\\Models\\UserSetting but returns Illuminate\\Database\\Eloquent\\Model#'
+        - '#Match expression does not handle remaining value: string#'
+        - '#Instanceof between App\\Domains\\Users\\Models\\User and Illuminate\\Contracts\\Auth\\MustVerifyEmail will always evaluate to true#'
+        - '#Spatie\\Activitylog\\Support\\ActivityLogger::performedOn\(\) expects Illuminate\\Database\\Eloquent\\Model, Spatie\\Permission\\Contracts\\Role given#'
+        - '#Spatie\\Activitylog\\Support\\ActivityLogger::performedOn\(\) expects Illuminate\\Database\\Eloquent\\Model, Spatie\\Permission\\Contracts\\Permission given#'
+        # HasFileQuota is intentionally kept as opt-in infra for file-owning
+        # modules that want per-row storage caps; the demo Equipment module no
+        # longer uses it, so phpstan sees the trait as unused.
+        - '#Trait App\\Domains\\Files\\Models\\Concerns\\HasFileQuota is used zero times and is not analysed#'
+
+    excludePaths:
+        - app/Domains/Operations/Providers/HorizonServiceProvider.php
+
+    reportUnmatchedIgnoredErrors: false

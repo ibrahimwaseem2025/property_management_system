@@ -1,0 +1,54 @@
+*.log
+.DS_Store
+.env
+.env.backup
+.env.production
+.phpactor.json
+.phpunit.result.cache
+/.fleet
+/.idea
+/.nova
+/.phpunit.cache
+/.vscode
+/.zed
+/auth.json
+/bootstrap/ssr
+/node_modules
+/public/build
+/public/hot
+/public/storage
+/storage/*.key
+/storage/pail
+/storage/framework/views/*.php
+/vendor
+_ide_helper.php
+_ide_helper_models.php
+.phpstorm.meta.php
+Homestead.json
+Homestead.yaml
+Thumbs.db
+/database/*.sqlite
+
+# Agent/tool personal state
+/.claude
+/.mcp.json
+CLAUDE.md
+Plan.md
+PLAN.md
+# PR review scratchpad — paste a CodeRabbit / CI comment into cr.md locally,
+# work through it, and commit the fixes. The raw review log itself stays out
+# of git.
+cr.md
+
+# Media uploads (dev)
+/storage/media-library
+
+# Staged backup restores (extracted on demand from the admin UI)
+/storage/app/backup-restores
+
+# Local docker-compose overrides (per-machine, not shared)
+/docker-compose.override.yml
+/compose.override.yml
+
+# Playwright MCP browser snapshots (ad-hoc verification output)
+/.playwright-mcp
