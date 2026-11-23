@@ -43,7 +43,7 @@
     "@inertiajs/vue3": "^3.0.3",
     "@primevue/themes": "^4.5.4",
     "@vitejs/plugin-vue": "^6.0.5",
-    "apexcharts": "^5.10.6",
+    "apexcharts": "^8.9.1",
     "dompurify": "^3.4.7",
     "laravel-echo": "^2.3.4",
     "leaflet": "^1.9.4",
