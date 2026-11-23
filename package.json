@@ -52,7 +52,7 @@
     "mjml": "^5.0.1",
     "pinia": "^3.0.4",
     "pinia-plugin-persistedstate": "^4.7.1",
-    "primeicons": "^7.0.0",
+    "primeicons": "^8.0.2",
     "primevue": "^4.5.4",
     "pusher-js": "^8.5.0",
     "typescript": "^6.0.2",
